@@ -1,0 +1,21 @@
+name: Docs Build
+
+on:
+  push:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "openapi.json"
+      - ".github/workflows/docs-build.yml"
+      - ".github/workflows/backend-docs.yml"
+      - ".github/scripts/docs/**"
+
+jobs:
+  build:
+    name: Reusable Docs Build
+    uses: ./.github/workflows/backend-docs.yml
+    with:
+      docs_dir: docs
+      openapi_path: openapi.json
+      publish: ${{ github.event_name == 'push' && 'true' || 'false' }}

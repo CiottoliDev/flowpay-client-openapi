@@ -1,3 +1,7 @@
 .vscode/*
 .DS_Store
 openapi.html
+postman_collection.json
+Simplified Flow.pdf
+old-openapi.json
+.tmp/

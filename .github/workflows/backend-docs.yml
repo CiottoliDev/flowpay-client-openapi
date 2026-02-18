@@ -1,0 +1,207 @@
+name: backend-docs
+
+on:
+  workflow_call:
+    inputs:
+      docs_dir:
+        description: Directory contenente description.md e openapi
+        required: false
+        default: "docs"
+        type: string
+      openapi_path:
+        description: Path a openapi (se non usare autodetect)
+        required: false
+        default: ""
+        type: string
+      mermaid_version:
+        description: Versione di Mermaid JS da iniettare (es. 10 o 10.9.1)
+        required: false
+        default: "10"
+        type: string
+      description_md:
+        description: Path a description.md (se diverso da default)
+        required: false
+        default: ""
+        type: string
+      output_dir:
+        description: Directory di output static site (per Pages)
+        required: false
+        default: "site"
+        type: string
+      node_version:
+        description: Versione Node per npx (@redocly/cli/marked)
+        required: false
+        default: "20"
+        type: string
+      deploy_pages:
+        description: Esegui deploy su GitHub Pages
+        required: false
+        default: "true"
+        type: string
+      checkout_submodules:
+        description: Checkout Git submodules as part of docs (true/false)
+        required: false
+        default: "false"
+        type: string
+      publish:
+        description: When 'true' uploads artifact and deploys Pages
+        required: false
+        default: "true"
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish-docs:
+    name: Build Redoc HTML and Publish
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: ${{ inputs.checkout_submodules == 'true' }}
+        # If you use submodules to pull docs from private repos, set submodules: true in the caller
+        # with:
+        #   submodules: true
+
+      - name: Check gh-pages branch availability
+        if: ${{ inputs.publish == 'true' && (inputs.deploy_pages || 'true') == 'true' }}
+        id: ghpages
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" gh-pages >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=gh-pages branch::No gh-pages branch found. Building from empty site state."
+          fi
+
+      - name: Checkout existing Pages (gh-pages)
+        if: ${{ inputs.publish == 'true' && (inputs.deploy_pages || 'true') == 'true' && steps.ghpages.outputs.exists == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: .gh-pages-prev
+
+      - name: Setup Node.js ${{ inputs.node_version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version || '20' }}
+
+      - name: Resolve BRANCH_DIR (head_ref or ref_name)
+        id: branchdir
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${GITHUB_HEAD_REF:-}" ]]; then
+            RAW="$GITHUB_HEAD_REF"
+          else
+            RAW="$GITHUB_REF_NAME"
+          fi
+          SANITIZED="${RAW//\//-}"
+          echo "Resolved BRANCH values: raw='$RAW' sanitized='$SANITIZED'"
+          echo "::notice title=BRANCH_DIR::Using '$SANITIZED' (raw: '$RAW')"
+          echo "BRANCH_RAW=$RAW" >> "$GITHUB_ENV"
+          echo "BRANCH_DIR=$SANITIZED" >> "$GITHUB_ENV"
+          echo "dir=$SANITIZED" >> "$GITHUB_OUTPUT"
+          echo "raw=$RAW" >> "$GITHUB_OUTPUT"
+
+      - name: Build docs with @redocly/cli (bundle per branch)
+        shell: bash
+        run: |
+          set -euo pipefail
+          DOCS_DIR="${{ inputs.docs_dir || 'docs' }}"
+          OPENAPI="${{ inputs.openapi_path || '' }}"
+          OUT_DIR="${{ inputs.output_dir || 'site' }}"
+          BRANCH_DIR="${BRANCH_DIR}"
+          mkdir -p "$OUT_DIR"
+          if [[ -d .gh-pages-prev ]]; then
+            rsync -a --exclude '.git' .gh-pages-prev/ "$OUT_DIR/" || true
+          fi
+          if [[ -z "$OPENAPI" ]]; then
+            for f in "$DOCS_DIR"/openapi.yaml "$DOCS_DIR"/openapi.yml "$DOCS_DIR"/openapi.json; do
+              if [[ -f "$f" ]]; then OPENAPI="$f"; break; fi
+            done
+          fi
+          if [[ -z "$OPENAPI" || ! -f "$OPENAPI" ]]; then
+            echo "File OpenAPI non trovato (cerca in ${DOCS_DIR}/openapi.yaml|yml|json o specifica input openapi_path)" >&2
+            exit 2
+          fi
+          mkdir -p "$OUT_DIR/$BRANCH_DIR"
+
+          npx -y @redocly/cli build-docs "$OPENAPI" -o "$OUT_DIR/$BRANCH_DIR/index.html"
+          rsync -a --include='*/' --include='*.png' --exclude='*' "$DOCS_DIR"/ "$OUT_DIR/$BRANCH_DIR/docs/" || true
+          
+
+      - name: Fix asset paths in generated HTML (HTML + embedded JSON)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          OUT_DIR="${{ inputs.output_dir || 'site' }}"
+          BRANCH_DIR="${BRANCH_DIR}"
+          INDEX="$OUT_DIR/$BRANCH_DIR/index.html"
+
+          if [[ ! -f "$INDEX" ]]; then
+            echo "Index not found: $INDEX"
+            exit 0
+          fi
+          python3 ".github/scripts/docs/fix_asset_paths.py" "$INDEX"
+
+      - name: Enable Mermaid diagrams (inject script)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          OUT_DIR="${{ inputs.output_dir || 'site' }}"
+          BRANCH_DIR="${BRANCH_DIR}"
+          INDEX="$OUT_DIR/$BRANCH_DIR/index.html"
+          MERMAID_VERSION="${{ inputs.mermaid_version || '10' }}"
+          bash ".github/scripts/docs/inject_mermaid.sh" "$INDEX" "$MERMAID_VERSION"
+      # --- publish gating (artifact + deploy) ---
+
+      - name: Upload Pages artifact
+        if: ${{ inputs.publish == 'true' && (inputs.deploy_pages || 'true') == 'true' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ inputs.output_dir || 'site' }}
+
+      - name: Deploy to GitHub Pages
+        if: ${{ inputs.publish == 'true' && (inputs.deploy_pages || 'true') == 'true' }}
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Report GitHub Pages URLs
+        if: ${{ inputs.publish == 'true' && (inputs.deploy_pages || 'true') == 'true' && steps.deployment.outputs.page_url != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_URL="${{ steps.deployment.outputs.page_url }}"
+          BRANCH_URL="${BASE_URL%/}/${BRANCH_DIR}/"
+          echo "::notice title=Pages base URL::${BASE_URL}"
+          echo "::notice title=Pages branch URL::${BRANCH_URL}"
+          {
+            echo "### GitHub Pages"
+            echo "- Base URL: ${BASE_URL}"
+            echo "- Branch URL (${BRANCH_RAW}): ${BRANCH_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Skipping publish (publish='${{ inputs.publish }}', deploy_pages='${{ inputs.deploy_pages }}')
+        if: ${{ inputs.publish != 'true' || (inputs.deploy_pages || 'true') != 'true' }}
+        run: echo "Skipping artifact upload and deploy (publish=${{ inputs.publish }}, deploy_pages=${{ inputs.deploy_pages }})"

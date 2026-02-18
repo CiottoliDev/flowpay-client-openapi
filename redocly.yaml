@@ -10,14 +10,26 @@ extends:
   - recommended
   
 rules:
-  # A sample custom rule. Read more about rules: https://redocly.com/docs/cli/rules/
-  rule/operation-description:
-    subject: 
-      type: Operation
-      property: description
-    assertions:
-      defined: true
-      minLength: 30
+  operation-operationId:
+    severity: error
+
+  no-unused-components:
+    severity: warn
+
+  operation-description:
+    severity: off
+
+  no-unresolved-refs:
+    severity: error
+
+  no-ambiguous-paths:
+    severity: error
+  
+  security-defined:
+    severity: error
+  
+  tag-description:
+    severity: error
 
 theme:
   openapi:
@@ -28,4 +40,49 @@ theme:
         - lang: Python
     disableSearch: false
     requiredPropsFirst: true
-    sortPropsAlphabetically: false
+    sortPropsAlphabetically: true
+    codeSamples: 
+      languages: 
+        - lang: curl
+        - lang: Node.js
+        - lang: Python
+    hideDownloadButton: false
+    mockServer:
+      description: "Mock server for testing purposes"
+      position: first
+      url: "https://mock.flowpay.it/v2s"
+    feedback: 
+      type: mood
+    
+    
+      
+
+    # theme:
+       
+      # colorMode:
+      #   default: system
+      #   disableSwitch: false
+
+      # sidebar:
+      #   backgroundColor: "#121212"
+      #   textColor:       "#e0e0e0"
+
+      # rightPanel:
+      #   backgroundColor: "#1e1e1e"
+      #   textColor:       "#e0e0e0"
+
+      # typography:
+      #   fontSize: "14px"
+      #   links:
+      #     color: "#8ab4f8"
+
+      # colors:
+      #   primary:
+      #     main: "#8ab4f8"
+      #   text:
+      #     primary:   "#e0e0e0"
+      #     secondary: "#cfcfcf"
+
+      # codeBlock:
+      #   backgroundColor: "#1f1f1f"
+      #   textColor:       "#e0e0e0"

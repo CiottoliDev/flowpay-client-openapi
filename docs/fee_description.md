@@ -4,14 +4,13 @@ FlowPay provides a fully automated fee management system that simplifies the pro
 
 Fees calculation rules are determined during the initial system setup, tailored to the specific contractual requirements of each partner. These fees can be charged either to the creditor or the debtor, depending on the case. When the creditor is responsible for the fee, a split payment is automatically generated. Conversely, if the debtor bears the cost, a bulk payment is triggered.
 
-Each rule is defined for a specific payment method (pis, sdd, card) and type of document. Additionally, minimum amounts can be established, below which fees are not applied, this allows the creation of exceptions to the general rule or progressive fee structures.
+The fee calculation rules are flexible and can be customized to suit various payment scenarios. Rules can be defined based on the type of payment (e.g., bulk, split, locked, PagoPA) and the payment method used (e.g., PIS, SDD, card). Also, minimum amounts can be set, below which fees are not applied, allowing for exceptions to the general rule or progressive fee structures.
 Rules also determine which party will be responsible for the fees, ensuring a clear and transparent process.
-In cases where documents involve multiple due dates subject to fees, the system does not allow partial payments tied to individual deadlines. Instead, the user is required to make a single full payment, in line with the overall terms of the document.
+Every fee rule is composed of a fixed component and a variable one based on the amount of the transaction.
+For bulk and split payments, the fee includes an additional fixed component for each beneficiary; this covers the costs of payments from the technical account to the beneficiaries.
 
-It is also possible to specify whether the fee is calculated as a percentage of the total amount of the document to be paid or based on a fixed amount per unit.
+In case of partial payments, the system automatically calculates the fee based on the amount of the single payment, ensuring that the fee is applied consistently across all payments. If the fee rule changes, the system automatically applies the new rules to all future payments, ensuring that the most up-to-date fee structure is always in effect.
 
 # Lifecycle
 
-When the user selects the payment method to be used, the fee calculation is done automatically by the payment gateway retrieving the most up-to-date rule applicable to that specific payment. Once the calculation is performed, the gateway automatically inserts the fee document into an aggregated document (Bulk).
-
-In accordance with the documentation related to bulk payments, if a user accesses a checkout linked to a document that has subsequently been included in a Bulk document, the payment gateway will automatically retrieve the final Bulk document. This ensures that the payment process is always aligned with the most recent information, simplifying the management of fees and their application to multiple payments.
+When the payer selects the payment method to be used, the fee calculation is done automatically by the payment gateway retrieving the most up-to-date rule applicable to that specific payment. Once the calculation is performed, the gateway automatically inserts the fee amount into the payment request.

@@ -1,0 +1,53 @@
+/* Beta badge */
+.beta-badge {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6a1b9a;
+  background: linear-gradient(90deg, #f3e5f5 0%, #f3e5f5 100%);
+  border-radius: 0.5rem;
+  box-shadow: var(--box-shadow);
+}
+.beta-badge::before {
+  display: inline-block;
+  font-size: 1em;
+  margin-right: 0.25rem;
+}
+
+/* Tooltip for beta badge */
+.beta-badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-0.5rem);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 10;
+}
+.beta-badge:hover::after {
+  opacity: 1;
+}
+
+/* Default tooltip when no data-tooltip attribute is set */
+.beta-badge:not([data-tooltip])::after {
+  content: "This is a beta feature. Behavior may change in future releases without notice, please use with caution.";
+}
+
+/* Default label when no inner text is provided */
+.beta-badge:empty::before {
+  content: "🧪 Beta";
+}
