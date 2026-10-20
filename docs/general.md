@@ -164,14 +164,14 @@ Response:
 
 FlowPay APIs implement offset-based pagination on all list endpoints, following a standard response structure.
 
-The proposed [SRTP payees registry](./srtp.md) preserves the pagoPA interface as an exception: `GET /srtp/payees` requires zero-based `page` and `size` (1–128) and returns `{payees, page}` directly. It does not use the generic `limit` / `offset` parameters or the AIS `page` / `per` convention. This documentation-only proposal does not confirm runtime availability.
+The proposed [SRTP payees registry](./srtp.md), `GET /srtp/payees`, uses the same optional `limit` / `offset` parameters and `PaginatedResult` response as `GET /customers` and `GET /refunds`. The upstream pagoPA `page` / `size` interface is adapted to this gateway convention. This documentation-only proposal does not confirm runtime availability.
 
 ## Query parameters
 
 When requesting a paginated resource, the following query parameters are supported:
 
-- `limit` (integer): the maximum number of items to return. Default is 50, maximum is 100.
-- `offset` (integer): the number of items to skip before starting to return results.
+- `limit` (integer, optional): the maximum number of items to return. Default is 20. The shared `LimitParam` schema declares no minimum or maximum.
+- `offset` (integer, optional): the number of items to skip before starting to return results. Default is 0. The shared `OffsetParam` schema declares no minimum or maximum.
 
 ## Response structure
 

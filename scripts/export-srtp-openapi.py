@@ -17,8 +17,8 @@ def export(source):
     document["info"]["title"] = "FlowPay SRTP Payees API"
     document["info"]["description"] = (
         "Proposed SRTP payees contract for the FlowPay client gateway. "
-        "Preserves pagoPA payees data and pagination with FlowPay API-key "
-        "authentication and gateway errors. This document does not confirm "
+        "Preserves pagoPA payee data with standard FlowPay limit/offset pagination, "
+        "API-key authentication and gateway errors. This document does not confirm "
         "runtime availability."
     )
     document["tags"] = [copy.deepcopy(tag) for tag in source["tags"] if tag["name"] == "SRTP"]
