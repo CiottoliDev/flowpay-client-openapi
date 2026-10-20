@@ -64,6 +64,10 @@
         {
             "name": "AIS",
             "description": "Account Information Service: consent, accounts, balances, transactions."
+        },
+        {
+            "name": "SRTP",
+            "description": "Proposed contract for querying the registry of creditors enabled for pagoPA SEPA Request To Pay. Runtime availability is outside this specification change."
         }
     ],
     "paths": {
@@ -2842,6 +2846,73 @@
                     }
                 }
             }
+        },
+        "/srtp/payees": {
+            "get": {
+                "summary": "List SRTP payees",
+                "description": "Proposed gateway contract for the pagoPA SRTP payees registry. Returns the original payees/page response without an additional envelope. Pagination is zero-based and requires page and size; it does not use limit/offset or the AIS page/per convention. RequestId and Version retain their upstream meaning; Version selects the SRTP provider API version (for example v1), independently of the FlowPay /v2 base URL. Authentication and errors follow the FlowPay gateway contract. This specification change does not implement the endpoint.",
+                "operationId": "getSrtpPayees",
+                "tags": [
+                    "SRTP"
+                ],
+                "externalDocs": {
+                    "description": "Official pagoPA SRTP Payees API",
+                    "url": "https://developer.pagopa.it/it/srtp/api/srtp-payees"
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/SrtpRequestId"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SrtpVersion"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SrtpPageNumber"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SrtpPageSize"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A page of payees enabled for pagoPA SRTP.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SrtpPageOfPayees"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequest"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/DefaultError",
+                        "description": "Missing or invalid FlowPay API key."
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/DefaultError",
+                        "description": "The authenticated application is not permitted to access the SRTP registry."
+                    },
+                    "429": {
+                        "$ref": "#/components/responses/DefaultError",
+                        "description": "Too many requests."
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/DefaultError",
+                        "description": "Internal server error."
+                    },
+                    "default": {
+                        "$ref": "#/components/responses/DefaultError"
+                    }
+                }
+            }
         }
     },
     "webhooks": {
@@ -3228,6 +3299,42 @@
                     "minimum": 1,
                     "maximum": 200,
                     "default": 50
+                }
+            },
+            "SrtpRequestId": {
+                "name": "RequestId",
+                "in": "header",
+                "description": "Unique identifier for the API request, used for tracing and correlation.",
+                "required": true,
+                "schema": {
+                    "$ref": "#/components/schemas/SrtpRequestId"
+                }
+            },
+            "SrtpVersion": {
+                "name": "Version",
+                "in": "header",
+                "description": "Specifies the version of the API the client wishes to use.",
+                "required": true,
+                "schema": {
+                    "$ref": "#/components/schemas/SrtpVersion"
+                }
+            },
+            "SrtpPageNumber": {
+                "name": "page",
+                "in": "query",
+                "description": "The page number of the registry results to retrieve (0-indexed).",
+                "required": true,
+                "schema": {
+                    "$ref": "#/components/schemas/SrtpPageNumber"
+                }
+            },
+            "SrtpPageSize": {
+                "name": "size",
+                "in": "query",
+                "description": "The number of registry entries to return per page.",
+                "required": true,
+                "schema": {
+                    "$ref": "#/components/schemas/SrtpPageSize"
                 }
             }
         },
@@ -5286,6 +5393,177 @@
                         "authorizedAt": "2026-03-12T14:15:20Z",
                         "validUntil": "2026-09-08T14:15:20Z",
                         "version": 3
+                    }
+                }
+            },
+            "SrtpPageNumber": {
+                "description": "The page number to retrieve (0-indexed).",
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0,
+                "maximum": 2147483647,
+                "example": 1
+            },
+            "SrtpPageSize": {
+                "description": "The number of registry entries to include per page.",
+                "type": "integer",
+                "format": "int32",
+                "minimum": 1,
+                "maximum": 128,
+                "example": 20
+            },
+            "SrtpTotalElements": {
+                "description": "The total number of elements available across all pages in the registry.",
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0,
+                "maximum": 9223372036854776000,
+                "example": 20
+            },
+            "SrtpTotalPages": {
+                "description": "The total number of pages available based on the current page size.",
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0,
+                "maximum": 9223372036854776000,
+                "example": 20
+            },
+            "SrtpRequestId": {
+                "description": "A unique identifier for tracking a single request across system boundaries, essential for logging and debugging.",
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                "minLength": 36,
+                "maxLength": 36,
+                "example": "bd615b4a-066d-443e-8dd2-a28a39931fef"
+            },
+            "SrtpVersion": {
+                "description": "The version of the API being requested.",
+                "type": "string",
+                "pattern": "^v[1-9]\\d{0,63}$",
+                "minLength": 1,
+                "maxLength": 65,
+                "example": "v1"
+            },
+            "SrtpName": {
+                "description": "The official registered name of the Payee.",
+                "type": "string",
+                "pattern": "^[ -~]{1,64}$",
+                "minLength": 1,
+                "maxLength": 64,
+                "example": "Roma Capitale"
+            },
+            "SrtpPayeeId": {
+                "description": "The unique identifier of the Payee in the registry. This is the Italian 11-digit VAT number (*Partita IVA*) or 16-digit fiscal code (*Codice Fiscale*).",
+                "type": "string",
+                "pattern": "\\d{11}|\\d{16}",
+                "minLength": 11,
+                "maxLength": 16,
+                "example": "02438750586"
+            },
+            "SrtpPageMetadata": {
+                "description": "Contains metadata for navigating the paginated registry query results.",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "totalElements": {
+                        "$ref": "#/components/schemas/SrtpTotalElements"
+                    },
+                    "totalPages": {
+                        "$ref": "#/components/schemas/SrtpTotalPages"
+                    },
+                    "page": {
+                        "$ref": "#/components/schemas/SrtpPageNumber"
+                    },
+                    "size": {
+                        "$ref": "#/components/schemas/SrtpPageSize"
+                    }
+                },
+                "required": [
+                    "totalElements",
+                    "totalPages",
+                    "page",
+                    "size"
+                ],
+                "example": {
+                    "totalElements": 198,
+                    "totalPages": 10,
+                    "page": 5,
+                    "size": 20
+                }
+            },
+            "SrtpPayee": {
+                "description": "Represents a single Payee entry in the registry.",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "payeeId": {
+                        "$ref": "#/components/schemas/SrtpPayeeId"
+                    },
+                    "name": {
+                        "$ref": "#/components/schemas/SrtpName"
+                    }
+                },
+                "required": [
+                    "payeeId",
+                    "name"
+                ],
+                "example": {
+                    "payeeId": "02438750586",
+                    "name": "Roma Capitale"
+                }
+            },
+            "SrtpPayees": {
+                "description": "A list of Payee entries from the registry.",
+                "type": "array",
+                "minItems": 0,
+                "maxItems": 128,
+                "items": {
+                    "$ref": "#/components/schemas/SrtpPayee"
+                },
+                "example": [
+                    {
+                        "payeeId": "02438750586",
+                        "name": "Roma Capitale"
+                    },
+                    {
+                        "payeeId": "80015010723",
+                        "name": "Comune di Bari"
+                    }
+                ]
+            },
+            "SrtpPageOfPayees": {
+                "description": "A single page from the registry results, containing a list of Payees and pagination metadata.",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "payees": {
+                        "$ref": "#/components/schemas/SrtpPayees"
+                    },
+                    "page": {
+                        "$ref": "#/components/schemas/SrtpPageMetadata"
+                    }
+                },
+                "required": [
+                    "payees",
+                    "page"
+                ],
+                "example": {
+                    "payees": [
+                        {
+                            "payeeId": "02438750586",
+                            "name": "Roma Capitale"
+                        },
+                        {
+                            "payeeId": "80015010723",
+                            "name": "Comune di Bari"
+                        }
+                    ],
+                    "page": {
+                        "totalElements": 2,
+                        "totalPages": 1,
+                        "page": 0,
+                        "size": 2
                     }
                 }
             }
